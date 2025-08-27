@@ -40,9 +40,9 @@ themes = {
 
 column_aliases = {
     "NAMN_top5": "Name(s)",
-    "TYP_combined": "Typology1",
+    "TYP_combined": "Sociotop",
     "typology": "Typology2",
-    "BIOTOP_combined": "Biotope",
+    "BIOTOP_combined": "Biotop",
     "amenities": "Amenities",
 }
 
