@@ -10,7 +10,7 @@ import sqlite3
 from datetime import datetime
 
 st.set_page_config(layout="wide")
-st.title("Welcome to the Park Puls map!")
+st.title("Welcome to the Park Puls App!")
 
 # =====================
 # Load Layers (Cached)
@@ -33,7 +33,7 @@ layer_variables["geometry"] = layer_variables["geometry"].simplify(0.00005)
 # =====================
 themes = {
     "Amenities": ["NAMN_top5", "TYP_combined", "typology", "amenities"],
-    "Environment": ["NAMN_top5", "typology"],
+    "Environment": ["NAMN_top5", "BIOTOP_combined"],
     "Accessibility": ["NAMN_top5"],
     "Socioeconomic factors": ["NAMN_top5"]
 }
@@ -62,12 +62,10 @@ layer_variables_filtered = get_filtered_layer(layer_variables, selected_layer, t
 popup_cols = [col for col in themes[selected_layer] if col in layer_variables_filtered.columns]
 
 # =====================
-# Session state
+# Session state for last clicked polygon
 # =====================
 if "clicked_park_index" not in st.session_state:
     st.session_state.clicked_park_index = None
-if "map_bounds" not in st.session_state:
-    st.session_state.map_bounds = None
 
 # =====================
 # Initialize SQLite database
@@ -112,42 +110,49 @@ geojson = folium.GeoJson(
 )
 geojson.add_to(m)
 
-# Highlight previously clicked park
-if st.session_state.clicked_park_index is not None:
-    clicked_polygon = layer_variables_filtered.iloc[[st.session_state.clicked_park_index]]
-    folium.GeoJson(
-        clicked_polygon,
-        style_function=lambda x: {
-            "fillColor": "red",
-            "color": "red",
-            "weight": 3,
-            "fillOpacity": 0.2
-        }
-    ).add_to(m)
+# Add highlight for previously clicked park (without zoom)
+# if st.session_state.clicked_park_index is not None:
+#     clicked_polygon = layer_variables_filtered.iloc[[st.session_state.clicked_park_index]]
+#     folium.GeoJson(
+#         clicked_polygon,
+#         style_function=lambda x: {
+#             "fillColor": "red",
+#             "color": "red",
+#             "weight": 3,
+#             "fillOpacity": 0.2
+#         }
+#     ).add_to(m)
 
-# Restore previous map bounds if available
-if st.session_state.map_bounds:
-    m.fit_bounds(st.session_state.map_bounds)
 
-# Basemap
-# folium.TileLayer(
-#     tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-#     attr='Esri',
-#     name='Esri Satellite',
-#     overlay=False,
-#     control=True
-# ).add_to(m)
+
+
+# =====================
+# Basemaps
+# =====================
+folium.map.CustomPane("labels").add_to(m)
 
 folium.TileLayer(
-    tiles="CartoDB Positron",
-    name="Carto Light",
+    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attr='Esri',
+    name='Esri Satellite',
     overlay=False,
     control=True
 ).add_to(m)
 
+# folium.TileLayer(
+#     tiles='https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png',
+#     attr='&copy; <a href="https://www.stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://www.stamen.com/">Stamen Design</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+#     name='Stamen Toner Labels',
+#     overlay=True,
+#     control=True,
+#     pane='labels'
+# ).add_to(m)
+
 folium.LayerControl('topright', collapsed=False).add_to(m)
 
+# =====================
 # Render map
+# =====================
 out = st_folium(m, key="map", use_container_width=True, height=750)
 
 # =====================
@@ -166,42 +171,79 @@ if out and out.get("last_object_clicked"):
         idx = clicked_polygon.index[0]
         st.session_state.clicked_park_index = idx
 
-        # Save current map bounds so it won't reset on rerun
-        st.session_state.map_bounds = m.get_bounds()
+        park_info = clicked_polygon.iloc[0].to_dict()
 
-# Display details if a park is selected
-if st.session_state.clicked_park_index is not None:
-    selected_polygon = layer_variables_filtered.iloc[[st.session_state.clicked_park_index]]
-    park_info = selected_polygon.iloc[0].to_dict()
+        st.sidebar.subheader("Selected Park Info")
+        for key, val in park_info.items():
+            if key != "geometry":
+                st.sidebar.markdown(f"**{column_aliases.get(key, key)}:** {val}")
 
-    st.sidebar.subheader("Selected Park Info")
-    for key, val in park_info.items():
-        if key != "geometry":
-            st.sidebar.markdown(f"**{column_aliases.get(key, key)}:** {val}")
+        area = clicked_polygon.iloc[0].geometry.area * (111_000**2)
+        st.sidebar.markdown(f"**Area:** {area:,.0f} m²")
 
-    area = selected_polygon.iloc[0].geometry.area * (111_000**2)
-    st.sidebar.markdown(f"**Area:** {area:,.0f} m²")
+        numeric_cols = [col for col in clicked_polygon.columns if col not in ["geometry", "index_right"] and pd.api.types.is_numeric_dtype(clicked_polygon[col])]
+        if numeric_cols:
+            st.sidebar.subheader("Park Attributes (Numeric)")
+            fig, ax = plt.subplots()
+            clicked_polygon[numeric_cols].iloc[0].plot(kind='bar', ax=ax)
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            st.sidebar.pyplot(fig)
 
-    numeric_cols = [col for col in selected_polygon.columns if col not in ["geometry", "index_right"] and pd.api.types.is_numeric_dtype(selected_polygon[col])]
-    if numeric_cols:
-        st.sidebar.subheader("Park Attributes (Numeric)")
-        fig, ax = plt.subplots()
-        selected_polygon[numeric_cols].iloc[0].plot(kind='bar', ax=ax)
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        st.sidebar.pyplot(fig)
+        # 5-star rating using radio buttons
+        feedback = st.sidebar.slider(
+            "Rating ⭐",  # label
+            min_value=1,
+            max_value=5,
+            value=3,
+            step=1
+        )
 
-    # Feedback form
-    with st.sidebar.form("feedback_form"):
-        st.subheader("Leave your feedback")
-        feedback = st.slider("Rating ⭐", min_value=1, max_value=5, value=3, step=1)
-        st.markdown("Your rating: " + "⭐" * feedback + "☆" * (5 - feedback))
-        comment = st.text_area(label="Park comment", placeholder="Add comment here", label_visibility="collapsed")
-        submitted = st.form_submit_button("Submit Feedback")
-        if submitted:
-            park_name = park_info.get("NAMN_top5", "Unknown")
-            log_feedback(park_name, feedback, comment)
-            st.sidebar.success("Thank you for your comment!")
+        # Show stars visually
+        st.sidebar.markdown("Your rating: " + "⭐" * feedback + "☆" * (5 - feedback))
 
-else:
-    st.sidebar.info("Click on a park to view details.")
+        # Comment form
+        st.sidebar.header("Leave a comment")
+        with st.sidebar.form("comment_form"):
+            comment = st.text_area(
+                label="Park comment",
+                placeholder="Add comment here",
+                label_visibility="collapsed"
+            )
+            submitted = st.form_submit_button("Submit")
+            if submitted:
+                park_name = park_info.get("NAMN_top5", "Unknown")
+                log_feedback(park_name, feedback, comment)
+                st.sidebar.success("Thank you for your comment!")
+
+        # Zoom to clicked polygon immediately (fix first-click jump)
+        bounds = clicked_polygon.total_bounds
+        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+
+    else:
+        st.sidebar.warning("No park found at this location.")
+
+# =====================
+# Example Download Button
+# =====================
+import numpy as np
+
+@st.cache_data
+def get_data():
+    df = pd.DataFrame(np.random.randn(50, 20), columns=("col %d" % i for i in range(20)))
+    return df
+
+@st.cache_data
+def convert_for_download(df):
+    return df.to_csv().encode("utf-8")
+
+df = get_data()
+csv = convert_for_download(df)
+
+st.download_button(
+    label="Example file (file type)",
+    data=csv,
+    file_name="data.csv",
+    mime="text/csv",
+    icon=":material/download:",
+)
