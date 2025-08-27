@@ -136,14 +136,14 @@ folium.TileLayer(
     control=True
 ).add_to(m)
 
-folium.TileLayer(
-    tiles='https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png',
-    attr='&copy; <a href="https://www.stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://www.stamen.com/">Stamen Design</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    name='Stamen Toner Labels',
-    overlay=True,
-    control=True,
-    pane='labels'
-).add_to(m)
+# folium.TileLayer(
+#     tiles='https://tiles.stadiamaps.com/tiles/stamen_toner_labels/{z}/{x}/{y}{r}.png',
+#     attr='&copy; <a href="https://www.stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://www.stamen.com/">Stamen Design</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+#     name='Stamen Toner Labels',
+#     overlay=True,
+#     control=True,
+#     pane='labels'
+# ).add_to(m)
 
 folium.LayerControl('topright', collapsed=False).add_to(m)
 
