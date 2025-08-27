@@ -200,7 +200,7 @@ if out and out.get("last_object_clicked"):
         st.sidebar.markdown("Your rating: " + "⭐" * feedback + "☆" * (5 - feedback))
 
         # Comment form
-        st.sidebar.header("Leave a comment")
+        st.sidebar.header("Leave a comment here")
         with st.sidebar.form("comment_form"):
             comment = st.text_area(
                 label="Park comment",
