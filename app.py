@@ -33,7 +33,7 @@ layer_variables["geometry"] = layer_variables["geometry"].simplify(0.00005)
 # =====================
 themes = {
     "Amenities": ["NAMN_top5", "TYP_combined", "typology", "amenities"],
-    "Environment": ["NAMN_top5", "BIOTOP_combined"],
+    "Environment": ["NAMN_top5", "typology"],
     "Accessibility": ["NAMN_top5"],
     "Socioeconomic factors": ["NAMN_top5"]
 }
