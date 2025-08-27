@@ -130,10 +130,17 @@ if st.session_state.map_bounds:
     m.fit_bounds(st.session_state.map_bounds)
 
 # Basemap
+# folium.TileLayer(
+#     tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+#     attr='Esri',
+#     name='Esri Satellite',
+#     overlay=False,
+#     control=True
+# ).add_to(m)
+
 folium.TileLayer(
-    tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr='Esri',
-    name='Esri Satellite',
+    tiles="CartoDB Positron",
+    name="Carto Light",
     overlay=False,
     control=True
 ).add_to(m)
